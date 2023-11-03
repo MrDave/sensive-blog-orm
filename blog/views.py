@@ -75,8 +75,8 @@ def index(request):
 
 
 def post_detail(request, slug):
-    post = Post.objects.get(slug=slug)
-    comments = Comment.objects.filter(post=post)
+    post = Post.objects.annotate(likes_count=Count("likes")).get(slug=slug)
+    comments = Comment.objects.filter(post=post).prefetch_related("author")
     serialized_comments = []
     for comment in comments:
         serialized_comments.append({
@@ -85,7 +85,7 @@ def post_detail(request, slug):
             'author': comment.author.username,
         })
 
-    likes = post.likes.all()
+    # likes = post.likes.all()
 
     related_tags = post.tags.all()
 
@@ -94,7 +94,7 @@ def post_detail(request, slug):
         'text': post.text,
         'author': post.author.username,
         'comments': serialized_comments,
-        'likes_amount': len(likes),
+        'likes_amount': post.likes_count,
         'image_url': post.image.url if post.image else None,
         'published_at': post.published_at,
         'slug': post.slug,
@@ -103,13 +103,20 @@ def post_detail(request, slug):
 
     most_popular_tags = Tag.objects.popular()[:5]
 
-    most_popular_posts = Post.objects.annotate(likes_count=Count("likes")).order_by("-likes_count")[:5]
+    most_popular_posts = Post.objects.annotate(
+        likes_count=Count("likes")
+    ).order_by("-likes_count").prefetch_related("author")[:5]
+    most_popular_posts_ids = [post.id for post in most_popular_posts]
+    posts_with_comments = Post.objects.filter(id__in=most_popular_posts_ids).annotate(comments_count=Count("comments"))
+    count_for_id = dict(posts_with_comments.values_list("id", "comments_count"))
+    for post in most_popular_posts:
+        post.comments_count = count_for_id[post.id]
 
     context = {
         'post': serialized_post,
         'popular_tags': [serialize_tag(tag) for tag in most_popular_tags],
         'most_popular_posts': [
-            serialize_post(post) for post in most_popular_posts
+            serialize_post_optimized(post) for post in most_popular_posts
         ],
     }
     return render(request, 'post-details.html', context)
