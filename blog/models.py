@@ -10,8 +10,27 @@ class PostQuerySet(models.QuerySet):
         return posts_at_year
 
     def popular(self):
-        popular_posts = self.annotate(likes_count=Count("likes")).order_by("-likes_count")
+        popular_posts = self.annotate(likes_count=Count("likes", distinct=True)).order_by("-likes_count")
         return popular_posts
+
+    def fetch_with_comments_count(self):
+        """Transform QuerySet into a list of posts with 'comments_count' attribute.
+
+        Give the posts in the original QuerySet 'comments_count' attribute and return a list of said posts.
+        Useful for situations where QuerySet will be annotated with other attributes so that time for SQL queries
+        remains short.
+        """
+        ids = [post.id for post in self]
+        posts_with_comments = Post.objects.filter(id__in=ids).annotate(
+            comments_count=Count("comments", distinct=True)
+        )
+        count_for_id = dict(posts_with_comments.values_list("id", "comments_count"))
+        for post in self:
+            post.comments_count = count_for_id[post.id]
+
+        return list(self)
+
+
 class TagQuerySet(models.QuerySet):
     def popular(self):
         popular_tags = self.annotate(posts_count=Count("posts")).order_by("-posts_count")
