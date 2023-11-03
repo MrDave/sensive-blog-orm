@@ -47,7 +47,7 @@ def index(request):
     all_posts = Post.objects.annotate(
         likes_count=Count("likes", distinct=True),
     ).prefetch_related("author")
-    most_popular_posts = all_posts.order_by("-likes_count")[:5]
+    most_popular_posts = all_posts.popular()[:5]
     most_fresh_posts = all_posts.order_by('-published_at')[:5]
 
     most_popular_posts_ids = [post.id for post in most_popular_posts]
@@ -103,9 +103,7 @@ def post_detail(request, slug):
 
     most_popular_tags = Tag.objects.popular()[:5]
 
-    most_popular_posts = Post.objects.annotate(
-        likes_count=Count("likes")
-    ).order_by("-likes_count").prefetch_related("author")[:5]
+    most_popular_posts = Post.objects.popular().prefetch_related("author")[:5]
     most_popular_posts_ids = [post.id for post in most_popular_posts]
     posts_with_comments = Post.objects.filter(id__in=most_popular_posts_ids).annotate(comments_count=Count("comments"))
     count_for_id = dict(posts_with_comments.values_list("id", "comments_count"))
@@ -127,7 +125,7 @@ def tag_filter(request, tag_title):
 
     most_popular_tags = Tag.objects.popular()[:5]
 
-    most_popular_posts = Post.objects.annotate(likes_count=Count("likes")).order_by("-likes_count")[:5]
+    most_popular_posts = Post.objects.popular().prefetch_related("author")[:5]
 
     related_posts = tag.posts.all()[:20]
 
