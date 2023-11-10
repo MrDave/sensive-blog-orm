@@ -1,12 +1,8 @@
 from django.shortcuts import render
 from django.shortcuts import get_object_or_404
-from blog.models import Comment, Post, Tag
+from blog.models import Post, Tag
 from django.db.models import Count
 from django.db.models import Prefetch
-
-
-def get_related_posts_count(tag):
-    return tag.posts.count()
 
 
 def serialize_post(post):
