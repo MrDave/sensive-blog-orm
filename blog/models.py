@@ -9,9 +9,9 @@ class PostQuerySet(models.QuerySet):
         posts_at_year = self.filter(published_at__year=year).order_by("published_at")
         return posts_at_year
 
-    def popular(self):
-        popular_posts = self.annotate(likes_count=Count("likes", distinct=True)).order_by("-likes_count")
-        return popular_posts
+    def fetch_with_likes_count(self):
+        posts_with_likes = self.annotate(likes_count=Count("likes", distinct=True)).order_by("-likes_count")
+        return posts_with_likes
 
     def fetch_with_comments_count(self):
         """Transform QuerySet into a list of posts with 'comments_count' attribute.
